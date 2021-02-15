@@ -9,11 +9,12 @@ U.S. Census Bureau QuickFacts: United States, from
     https://www.census.gov/quickfacts/
 """
 
-from scipy import optimize
-from tqdm import tqdm
-import numpy as np
+
 import matplotlib.pyplot as plt
+import numpy as np
+from scipy import optimize
 import sys
+from tqdm import tqdm
 
 
 def load_data_file(filename):
