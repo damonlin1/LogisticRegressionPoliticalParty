@@ -12,7 +12,6 @@ U.S. Census Bureau QuickFacts: United States, from
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy import optimize
 from tqdm import tqdm
 
 
@@ -37,7 +36,7 @@ def load_data_file(filename):
                 data.append(nums)
         return np.array(data)
     except FileNotFoundError:
-        print(f"{filename} does not exist in this directory.")
+        print(f'{filename} does not exist in this directory.')
 
 
 def load_results_file(filename):
@@ -57,7 +56,7 @@ def load_results_file(filename):
                 results = np.append(results, int(line.strip()))
         return results
     except FileNotFoundError:
-        print(f"{filename} does not exist in this directory.")
+        print(f'{filename} does not exist in this directory.')
 
 
 def sigmoid(X):
@@ -95,7 +94,7 @@ def compute_cost(theta, X, y, reg_const):
     return cost
 
 
-def compute_grad(theta, X, y, reg_const):
+def compute_grad(theta, X, y, reg_const=0.0):
     """
     Compute the gradient of the parameters with regularization.
 
@@ -103,7 +102,7 @@ def compute_grad(theta, X, y, reg_const):
         theta: an m x 1 vector of parameters to fit the data
         X: an n x m matrix of floats of the test data
         y: an n x 1 vector of 1's (Democrat) and 0's (Republican)
-        reg_const: the regularization constant
+        reg_const: the regularization constant (default value is 0.0)
 
     Return value:
         the gradient of the parameters
@@ -130,130 +129,106 @@ def gradient_descent(X, y, lr, num_iter):
         num_iter: the number of times to iterate gradient descent
 
     Return value:
-        a (theta, loss_vec) tuple of the parameters after gradient descent and
-        the vector of the cost after each iteration
+        a (theta, train_cost, test_cost) tuple of the parameters after gradient
+        descent and the vector of the training and test dat cost after each
+        iteration
     """
     m = X.shape[1]
     theta = np.zeros(m, dtype=float)
     reg_const = 0.05
-    loss_vec = np.array([])
-    is_close = 1e-9
+    train_cost, test_cost = np.array([]), np.array([])
     for _ in tqdm(range(num_iter)):
         old_error = compute_cost(theta, X, y, reg_const)
-        loss_vec = np.append(loss_vec, old_error)
-        theta -= lr * compute_grad(theta, X, y, reg_const)
+        train_cost = np.append(train_cost, old_error)
+        test_cost = np.append(test_cost, test_accuracy(theta)[0])
+        theta -= lr * compute_grad(theta, X, y, reg_const=reg_const)
         new_error = compute_cost(theta, X, y, reg_const)
-        convergence = old_error - new_error < is_close
-        if convergence:
+        if old_error - new_error < 1e-9:
             break
-    return theta, loss_vec
+    return theta, train_cost, test_cost
 
 
-def run_gradient_descent():
+def plot_cost(vec1, vec2):
     """
-    Run gradient descent on the specified text files.
-
-    Return value:
-        a (theta, cost_vec) tuple of the parameters after gradient descent and
-        the vector of the cost after each iteration
-    """
-    X = load_data_file("training_district_info.txt")
-    # note that the figures in the text file has been rescaled so that all
-    # values are between 0 and 10 for faster convergence
-    y = load_results_file("training_party_affiliation.txt")
-    lr, num_iter = 0.1, 40000
-    return gradient_descent(X, y, lr, num_iter)
-
-
-def plot_loss(vector):
-    """
-    Plot the loss of the parameters as a function of the number of iterations
+    Plot the cost of the parameters as a function of the number of iterations
     done by gradient descent.
 
     Argument:
-        vector: the vector of loss to plot
+        vec1: the vector of in-sample cost to plot
+        vec2: the vector of out-of-sample cost to plot
     """
-    plt.plot(vector)
-    plt.title("Gradient descent")
-    plt.xlabel("Iterations")
-    plt.ylabel("Loss")
+    plt.plot(vec1, label='In-Sample Cost')
+    plt.plot(vec2, label='Out-of-Sample Cost')
+    plt.legend()
+    plt.title('Gradient Descent vs. Cost')
+    plt.xlabel('Iterations')
+    plt.ylabel('Cost')
     plt.show()
 
 
-def run_bfgs():
+def test_accuracy(theta):
     """
-    Run BFGS on the specified text files to find the optimal parameters.
+    Calculates the cost and test the accuracy of the parameters obtained from
+    gradient descent on test data.
+
+    Argument:
+        theta: the parameters of the model
 
     Return value:
-        the optimal parameters after running BFGS
+        a (cost, correct) tuple of the cost and the percentage of correct
+        predictions associated with the given theta
     """
-    X = load_data_file("training_district_info.txt")
-    # note that the figures in the text file has been rescaled so that all
-    # values are between 0 and 10 for faster convergence
-    y = load_results_file("training_party_affiliation.txt")
-    t0 = np.zeros(X.shape[1], dtype=float)
-    theta = optimize.minimize(compute_cost, t0, method="bfgs", jac=compute_grad, args=(X, y, 0.05))
-    return theta.x
+    X_test = load_data_file('test_district_info.txt')
+    y_test = load_results_file('test_party_affiliation.txt')
+    h_test = sigmoid(np.matmul(X_test, theta))
+    accuracy = sum(np.round(h_test) == y_test) / len(y_test) * 100
+    return compute_cost(theta, X_test, y_test, 0.05), accuracy
 
 
-def accuracy():
-    """
-    Test the accuracy of the parameters obtained from gradient descent and BFGS
-    on training and test data data.
-
-    Return value:
-        a (gd_train_acc, bfgs_train_acc, gd_test_acc, bfgs_test_acc) tuple
-    """
-    X_train = load_data_file("training_district_info.txt")
-    X_test = load_data_file("test_district_info.txt")
-    y_train = load_results_file("training_party_affiliation.txt")
-    y_test = load_results_file("test_party_affiliation.txt")
-    h_train1 = sigmoid(np.matmul(X_train, theta_gd))
-    h_train2 = sigmoid(np.matmul(X_train, theta_bfgs))
-    h_test1 = sigmoid(np.matmul(X_test, theta_gd))
-    h_test2 = sigmoid(np.matmul(X_test, theta_bfgs))
-    gd_train_acc = sum(np.round(h_train1) == y_train) / len(y_train) * 100
-    bfgs_train_acc = sum(np.round(h_train2) == y_train) / len(y_train) * 100
-    gd_test_acc = sum(np.round(h_test1) == y_test) / len(y_test) * 100
-    bfgs_test_acc = sum(np.round(h_test2) == y_test) / len(y_test) * 100
-    return gd_train_acc, bfgs_train_acc, gd_test_acc, bfgs_test_acc
-
-
-def interactive_predict():
+def user_predict(theta):
     """
     Predict which party a district will vote for by asking for user input.
+
+    Argument:
+        theta: the parameters of the model
     """
     try:
-        name = input("County or state name: ").capitalize()
+        name = input('County or state name: ').capitalize()
         inflation = 1.152  # adjust from 2018 to 2010 US dollar
-        median_income = float(input("Median income: ")) / 10000 / inflation
-        demographics = float(input("Percent white: ")) / 100
-        unemployment_rate = float(input("Unemployment rate: ")) / 100
-        bachelors = float(input("Percent with Bachelor's degree: ")) / 100
+        median_income = float(input('Median income: ')) / 10000 / inflation
+        demographics = float(input('Percent white: ')) / 100
+        unemployment_rate = float(input('Unemployment rate: ')) / 100
+        bachelors = float(input('Percent with Bachelor\'s degree: ')) / 100
         # rescale above values to match the training data
         info = [1, median_income, demographics, unemployment_rate, bachelors]
-        party = sigmoid(np.dot(theta_gd, info))
+        party = sigmoid(np.dot(theta, info))
         if round(party):
             chance = party * 100
-            print(f"{name}: {chance:.2f}% probability of voting Democrat.")
+            print(f'{name}: {chance:.2f}% probability of voting Democrat.')
         else:
             chance = (1 - party) * 100
-            print(f"{name}: {chance:.2f}% probability of voting Republican.")
+            print(f'{name}: {chance:.2f}% probability of voting Republican.')
     except ValueError:
-        print("All values entered should be numbers.")
+        print('All values entered should be numbers.')
 
 
-if __name__ == "__main__":
-    theta_gd, loss_vec = run_gradient_descent()
-    theta_bfgs = run_bfgs()
-    param1 = np.around(theta_gd, decimals=4)
-    param2 = np.around(theta_bfgs, decimals=4)
-    gd_train_acc, bfgs_train_acc, gd_test_acc, bfgs_test_acc = accuracy()
-    print(f"With gradient descent, the parameters are {param1}\n"
-          f"with a training set accuracy of {gd_train_acc:.2f}% "
-          f"and a test set accuracy of {gd_test_acc:.2f}%.")
-    print(f"With BFGS, the parameters are {param2}\n"
-          f"with a training set accuracy of {bfgs_train_acc:.2f}% "
-          f"and a test set accuracy of {bfgs_test_acc:.2f}%.")
-    plot_loss(loss_vec)
-    # interactive_predict()
+def main():
+    # note that the figures in the text file has been rescaled so that all
+    # values are between 0 and 10 for faster convergence
+    X_train = load_data_file('training_district_info.txt')
+    y_train = load_results_file('training_party_affiliation.txt')
+    lr, num_iter = 0.1, 100000
+    print('Training...')
+    theta, train_cost, test_cost = gradient_descent(X_train, y_train, lr,
+                                                    num_iter)
+    print('Finished')
+    accuracy = test_accuracy(theta)[1]
+    theta = np.around(theta, decimals=4)
+    print(f'Using gradient descent, the parameters are {theta}'
+          f' with a test set accuracy of {accuracy:.2f}%.')
+    plot_cost(train_cost, test_cost)
+    # user_predict(theta)
+
+
+if __name__ == '__main__':
+    main()
