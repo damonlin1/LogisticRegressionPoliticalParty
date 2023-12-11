@@ -1,4 +1,4 @@
-# Logistic Regression Project
+# LogisticRegressionPoliticalParty
 
 ## Used several social and economic indicators to predict whether a district tends to vote Democrat or Republican using data collected in the 2016 Presidential Election.
 
