@@ -1,6 +1,6 @@
-# A project using machine learning to predict political affliation of a district
+# Logistic Regression Project
 
-## The ML program used several social and economic indicators to predict whether a district tends to vote Democrat or Republican using data collected in the 2016 Presidential Election.
+## Used several social and economic indicators to predict whether a district tends to vote Democrat or Republican using data collected in the 2016 Presidential Election.
 
 ### The district specific data used are:
 - Median income
